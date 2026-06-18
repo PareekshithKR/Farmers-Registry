@@ -256,6 +256,49 @@ button:hover {
     rgba(0,0,0,.2);
 }
 
+.landing{
+  height:100vh;
+
+  display:flex;
+  flex-direction:column;
+
+  justify-content:center;
+  align-items:center;
+
+  text-align:center;
+
+  background:
+  linear-gradient(
+    135deg,
+    #166534,
+    #22c55e
+  );
+
+  color:white;
+}
+
+.landing h1{
+  font-size:4rem;
+}
+
+.landing p{
+  margin-top:10px;
+  margin-bottom:20px;
+
+  font-size:1.2rem;
+}
+
+.landing button{
+  padding:15px 30px;
+
+  font-size:1rem;
+
+  border:none;
+  border-radius:12px;
+
+  cursor:pointer;
+}
+
 .close-btn{
   position:absolute;
 
