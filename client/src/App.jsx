@@ -3,64 +3,69 @@ import FarmerForm from "./components/FarmerForm";
 import FarmerMap from "./components/FarmerMap";
 
 function App() {
-
   const [mapRefreshKey, setMapRefreshKey] = useState(0);
+
+  const [boundaryConfirmed, setBoundaryConfirmed] =
+    useState(false);
 
   const [selectedLocation, setSelectedLocation] =
     useState(null);
 
   const [selectedPolygon, setSelectedPolygon] =
-  useState(null);
+    useState(null);
 
-const [calculatedArea, setCalculatedArea] =
-  useState(0);  
+  const [calculatedArea, setCalculatedArea] =
+    useState(0);
 
   const [polygonPoints, setPolygonPoints] =
-  useState([]);
+    useState([]);
 
-  const [radius, setRadius] = useState(5);  
+  const [radius, setRadius] = useState(5);
+
+  const handleRegistered = () => {
+    setMapRefreshKey((key) => key + 1);
+
+    setPolygonPoints([]);
+    setSelectedLocation(null);
+    setSelectedPolygon(null);
+    setCalculatedArea(0);
+    setBoundaryConfirmed(false);
+  };
 
   return (
-    <div>
-      <h1>Farmer Land Registry</h1>
+    <div className="app">
 
-      <FarmerForm
-  polygonPoints={polygonPoints}
-  setPolygonPoints={setPolygonPoints}
-  selectedLocation={selectedLocation}
-  selectedPolygon={selectedPolygon}
-  calculatedArea={calculatedArea}
-  onRegistered={() =>
-    setMapRefreshKey((key) => key + 1)
-  }
-/>
+      <header className="header">
+        <h1>🌾 Farmer Land Registry</h1>
+        <p>GIS-Based Land Management System</p>
+      </header>
 
-      <div>
-  <label>Search Radius (km): </label>
+      <FarmerMap
+        refreshKey={mapRefreshKey}
+        selectedLocation={selectedLocation}
+        setSelectedLocation={setSelectedLocation}
+        radius={radius}
+        setRadius={setRadius}
+        setSelectedPolygon={setSelectedPolygon}
+        calculatedArea={calculatedArea}
+        setCalculatedArea={setCalculatedArea}
+        polygonPoints={polygonPoints}
+        setPolygonPoints={setPolygonPoints}
+        boundaryConfirmed={boundaryConfirmed}
+        setBoundaryConfirmed={setBoundaryConfirmed}
+      />
 
-  <input
-    type="number"
-    value={radius}
-    onChange={(e) =>
-      setRadius(Number(e.target.value))
-    }
-  />
-</div>
+      {boundaryConfirmed && (
+        <FarmerForm
+          selectedLocation={selectedLocation}
+          selectedPolygon={selectedPolygon}
+          calculatedArea={calculatedArea}
+          setPolygonPoints={setPolygonPoints}
+          setBoundaryConfirmed={setBoundaryConfirmed}
+          onRegistered={handleRegistered}
+        />
+      )}
 
-
-
-<FarmerMap
-  refreshKey={mapRefreshKey}
-  selectedLocation={selectedLocation}
-  setSelectedLocation={setSelectedLocation}
-  radius={radius}
-  selectedPolygon={selectedPolygon}
-  setSelectedPolygon={setSelectedPolygon}
-  calculatedArea={calculatedArea}
-  setCalculatedArea={setCalculatedArea}
-  polygonPoints={polygonPoints}
-  setPolygonPoints={setPolygonPoints}
-/>
     </div>
   );
 }

@@ -2,18 +2,15 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import * as turf from "@turf/turf";
 
-
-import {
-  Polygon
-} from "react-leaflet";
-
 import {
   MapContainer,
   TileLayer,
   Marker,
   Popup,
+  Polygon,
   Circle,
-  FeatureGroup,
+  Tooltip,
+  useMap,
   useMapEvents
 } from "react-leaflet";
 
@@ -21,21 +18,23 @@ import "leaflet/dist/leaflet.css";
 
 function LocationSelector({
   setSelectedLocation,
-  polygonPoints,
-  setPolygonPoints
+  setPolygonPoints,
+  boundaryConfirmed
 }) {
   useMapEvents({
-    click(e) {
+    click(event) {
+      if (boundaryConfirmed) {
+        return;
+      }
 
       const point = {
-        lat: e.latlng.lat,
-        lng: e.latlng.lng
+        lat: event.latlng.lat,
+        lng: event.latlng.lng
       };
 
       setSelectedLocation(point);
-
-      setPolygonPoints(prev => [
-        ...prev,
+      setPolygonPoints((previousPoints) => [
+        ...previousPoints,
         point
       ]);
     }
@@ -44,24 +43,51 @@ function LocationSelector({
   return null;
 }
 
-function getCropColor(crop) {
+function FitBounds({ farmers, requestKey }) {
+  const map = useMap();
 
-  switch (
-    crop?.toLowerCase()
-  ) {
+  useEffect(() => {
+    if (requestKey === 0) {
+      return;
+    }
 
-    case "paddy":
-      return "green";
+    const points = [];
 
-    case "coconut":
-      return "brown";
+    farmers.forEach((farmer) => {
+      const location = farmer.location?.coordinates;
 
-    case "banana":
-      return "yellow";
+      if (
+        location?.length >= 2 &&
+        Number.isFinite(location[0]) &&
+        Number.isFinite(location[1])
+      ) {
+        points.push([location[1], location[0]]);
+      }
 
-    default:
-      return "blue";
-  }
+      const boundary = farmer.landBoundary?.coordinates?.[0];
+
+      boundary?.forEach((coordinate) => {
+        if (
+          coordinate?.length >= 2 &&
+          Number.isFinite(coordinate[0]) &&
+          Number.isFinite(coordinate[1])
+        ) {
+          points.push([coordinate[1], coordinate[0]]);
+        }
+      });
+    });
+
+    if (points.length === 1) {
+      map.setView(points[0], 14);
+    } else if (points.length > 1) {
+      map.fitBounds(points, {
+        padding: [60, 60],
+        maxZoom: 15
+      });
+    }
+  }, [farmers, map, requestKey]);
+
+  return null;
 }
 
 function FarmerMap({
@@ -69,37 +95,63 @@ function FarmerMap({
   selectedLocation,
   setSelectedLocation,
   radius,
-  selectedPolygon,
+  setRadius,
   setSelectedPolygon,
   calculatedArea,
   setCalculatedArea,
   polygonPoints,
-  setPolygonPoints
+  setPolygonPoints,
+  boundaryConfirmed,
+  setBoundaryConfirmed
 }) {
   const [farmers, setFarmers] = useState([]);
+  const [fitBoundsRequest, setFitBoundsRequest] = useState(0);
+  const [editingFarmer, setEditingFarmer] =
+  useState(null);
 
   useEffect(() => {
-    fetchFarmers();
+    let ignoreResponse = false;
+
+    const loadFarmers = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:3000/farmers"
+        );
+
+        if (!ignoreResponse) {
+          setFarmers(response.data);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    loadFarmers();
+
+    return () => {
+      ignoreResponse = true;
+    };
   }, [refreshKey]);
 
-  const fetchFarmers = async () => {
+  const fetchFarmers = async (fitResults = false) => {
     try {
       const response = await axios.get(
         "http://localhost:3000/farmers"
       );
 
       setFarmers(response.data);
+
+      if (fitResults) {
+        setFitBoundsRequest((request) => request + 1);
+      }
     } catch (error) {
-      console.error(
-        "Error fetching farmers:",
-        error
-      );
+      console.error(error);
     }
   };
 
   const searchNearby = async () => {
     if (!selectedLocation) {
-      alert("Select a location on the map first");
+      alert("Select a location first");
       return;
     }
 
@@ -116,222 +168,459 @@ function FarmerMap({
       );
 
       setFarmers(response.data);
+      setFitBoundsRequest((request) => request + 1);
     } catch (error) {
-      console.error(
-        "Nearby search error:",
-        error
-      );
-
+      console.error(error);
       alert("Nearby search failed");
     }
   };
 
-  const finishBoundary = () => {
+  const deleteFarmer = async (id) => {
 
-  if (polygonPoints.length < 3) {
-    alert("Select at least 3 points");
+  const confirmed =
+    window.confirm(
+      "Delete this farmer?"
+    );
+
+  if (!confirmed) {
     return;
   }
 
-  const coordinates =
-    polygonPoints.map(point => [
+  try {
+
+    await axios.delete(
+      `http://localhost:3000/farmers/${id}`
+    );
+
+    fetchFarmers(true);
+
+  } catch (error) {
+
+    console.error(error);
+
+    alert(
+      "Delete failed"
+    );
+
+  }
+
+};
+
+const startEditing = (
+  farmer
+) => {
+
+  setEditingFarmer(
+    farmer
+  );
+
+};
+
+const saveFarmer = async () => {
+
+  try {
+
+    await axios.put(
+      `http://localhost:3000/farmers/${editingFarmer._id}`,
+      {
+        name: editingFarmer.name,
+        phone: editingFarmer.phone,
+        cropType: editingFarmer.cropType
+      }
+    );
+
+    setEditingFarmer(null);
+
+    fetchFarmers(true);
+
+    alert("Farmer Updated");
+
+  } catch (error) {
+
+    console.error(error);
+
+    alert("Update Failed");
+
+  }
+
+};
+
+  const finishBoundary = () => {
+    if (polygonPoints.length < 3) {
+      alert("Select at least 3 points");
+      return;
+    }
+
+    const coordinates = polygonPoints.map((point) => [
       point.lng,
       point.lat
     ]);
 
-  coordinates.push(coordinates[0]);
+    coordinates.push(coordinates[0]);
 
-  const polygon =
-    turf.polygon([coordinates]);
+    const polygon = turf.polygon([coordinates]);
+    const areaSqMeters = turf.area(polygon);
+    const areaAcres = areaSqMeters * 0.000247105;
 
-  const areaSqMeters =
-    turf.area(polygon);
+    setCalculatedArea(areaAcres);
+    setSelectedPolygon(coordinates);
+    setBoundaryConfirmed(true);
+  };
 
-  const areaAcres =
-    areaSqMeters * 0.000247105;
-
-  setCalculatedArea(areaAcres);
-
-  setSelectedPolygon(coordinates);
-
-  alert(
-    `Area: ${areaAcres.toFixed(2)} acres`
-  );
-};
+  const resetBoundary = () => {
+    setPolygonPoints([]);
+    setSelectedLocation(null);
+    setSelectedPolygon(null);
+    setCalculatedArea(0);
+    setBoundaryConfirmed(false);
+  };
 
   return (
     <>
-      <div style={{ marginBottom: "10px" }}>
+      <div className="map-toolbar">
+
+        <div className="radius-control">
+  <label>Radius (km)</label>
+
+  <input
+    type="number"
+    min="1"
+    value={radius}
+    onChange={(e) =>
+      setRadius(Number(e.target.value))
+    }
+  />
+</div>
+
         <button onClick={searchNearby}>
           Find Nearby Farmers
         </button>
 
-        <button
-          onClick={fetchFarmers}
-          style={{ marginLeft: "10px" }}
-        >
+        <button onClick={() => fetchFarmers(true)}>
           Show All Farmers
         </button>
 
-        <button
-  onClick={finishBoundary}
-  style={{ marginLeft: "10px" }}
->
-  Finish Boundary
-</button>
-
-<button
-  onClick={() => {
-    setPolygonPoints([]);
-    setSelectedPolygon(null);
-    setCalculatedArea(0);
-  }}
-  style={{
-    marginLeft: "10px"
-  }}
->
-  Reset Boundary
-</button>
-
-{calculatedArea > 0 && (
-  <div>
-    Area:
-    {" "}
-    {calculatedArea.toFixed(2)}
-    {" "}
-    acres
-  </div>
-)}
-
+        {calculatedArea > 0 && (
+          <div className="toolbar-area">
+            Area: {calculatedArea.toFixed(2)} acres
+          </div>
+        )}
       </div>
 
       <MapContainer
         center={[10.5276, 76.2711]}
         zoom={10}
         style={{
-          height: "500px",
-          marginTop: "20px"
+          height: "calc(100vh - 180px)",
+          borderRadius: "12px"
         }}
       >
+        <FitBounds
+          farmers={farmers}
+          requestKey={fitBoundsRequest}
+        />
+
         <TileLayer
           attribution="&copy; OpenStreetMap"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
         <LocationSelector
-  setSelectedLocation={setSelectedLocation}
-  polygonPoints={polygonPoints}
-  setPolygonPoints={setPolygonPoints}
-/>
+          setSelectedLocation={setSelectedLocation}
+          setPolygonPoints={setPolygonPoints}
+          boundaryConfirmed={boundaryConfirmed}
+        />
 
         {farmers.map((farmer) => {
+          const boundary = farmer.landBoundary?.coordinates?.[0];
 
-  // NEW POLYGON FARMS
+          if (boundary && boundary.length >= 3) {
 
-  const boundary =
-    farmer.landBoundary?.coordinates?.[0];
+  const positions = boundary.map((coordinate) => [
+    coordinate[1],
+    coordinate[0]
+  ]);
 
-  if (
-    boundary &&
-    boundary.length >= 3
-  ) {
+  const centerLat =
+    positions.reduce(
+      (sum, p) => sum + p[0],
+      0
+    ) / positions.length;
 
-    const positions =
-      boundary.map(coord => [
-        coord[1],
-        coord[0]
-      ]);
+  const centerLng =
+    positions.reduce(
+      (sum, p) => sum + p[1],
+      0
+    ) / positions.length;
 
-    return (
+  return (
+    <>
       <Polygon
-        key={farmer._id}
+        key={`poly-${farmer._id}`}
         positions={positions}
+        pathOptions={{
+          color: "#16a34a",
+          fillColor: "#22c55e",
+          fillOpacity: 0.3
+        }}
+      />
+
+      <Marker
+        key={`marker-${farmer._id}`}
+        position={[
+          centerLat,
+          centerLng
+        ]}
       >
         <Popup>
+
           <b>{farmer.name}</b>
+
           <br />
-          Crop: {farmer.cropType}
+
+          Crop:
+          {" "}
+          {farmer.cropType}
+
           <br />
+
           Area:
           {" "}
           {farmer.plotSize?.toFixed(2)}
           {" "}
           acres
-        </Popup>
-      </Polygon>
-    );
-  }
 
-  // OLD POINT FARMS
-
-  const coordinates =
-    farmer.location?.coordinates;
-
-  if (
-    coordinates &&
-    coordinates.length >= 2
-  ) {
-
-    const [lng, lat] =
-      coordinates;
-
-    return (
-      <Marker
-        key={farmer._id}
-        position={[
-          lat,
-          lng
-        ]}
-      >
-        <Popup>
-          <b>{farmer.name}</b>
           <br />
-          Crop:
-          {" "}
-          {farmer.cropType}
+          <br />
+
+          <button
+            onClick={() =>
+              startEditing(farmer)
+            }
+          >
+            ✏️ Edit
+          </button>
+
+          <button
+            onClick={() =>
+              deleteFarmer(
+                farmer._id
+              )
+            }
+            style={{
+              marginLeft: "10px"
+            }}
+          >
+            🗑 Delete
+          </button>
+
         </Popup>
       </Marker>
-    );
-  }
 
-  return null;
-})}
+      {editingFarmer && (
+
+  <div className="modal-overlay">
+
+    <div className="modal">
+
+      <h2>Edit Farmer</h2>
+
+      <input
+        className="input"
+        value={editingFarmer.name}
+        onChange={(e) =>
+          setEditingFarmer({
+            ...editingFarmer,
+            name: e.target.value
+          })
+        }
+      />
+
+      <input
+        className="input"
+        value={editingFarmer.phone}
+        onChange={(e) =>
+          setEditingFarmer({
+            ...editingFarmer,
+            phone: e.target.value
+          })
+        }
+      />
+
+      <input
+        className="input"
+        value={editingFarmer.cropType}
+        onChange={(e) =>
+          setEditingFarmer({
+            ...editingFarmer,
+            cropType: e.target.value
+          })
+        }
+      />
+
+      <div
+        style={{
+          display:"flex",
+          gap:"10px"
+        }}
+      >
+
+        <button
+          onClick={saveFarmer}
+        >
+          Save
+        </button>
+
+        <button
+          onClick={() =>
+            setEditingFarmer(null)
+          }
+        >
+          Cancel
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+)}
+
+    </>
+  );
+}
+
+          const coordinates = farmer.location?.coordinates;
+
+          if (coordinates && coordinates.length >= 2) {
+            const [lng, lat] = coordinates;
+
+            return (
+              <Marker
+                key={farmer._id}
+                position={[lat, lng]}
+              >
+                <Popup>
+
+  <b>{farmer.name}</b>
+
+  <br />
+
+  Crop:
+  {" "}
+  {farmer.cropType}
+
+  <br />
+
+  Area:
+  {" "}
+  {farmer.plotSize?.toFixed(2)}
+  {" "}
+  acres
+
+  <br />
+  <br />
+
+  <button
+    onClick={() =>
+      startEditing(farmer)
+    }
+  >
+    ✏️ Edit
+  </button>
+
+  <button
+    onClick={() =>
+      deleteFarmer(
+        farmer._id
+      )
+    }
+    style={{
+      marginLeft:"10px"
+    }}
+  >
+    🗑 Delete
+  </button>
+
+</Popup>
+              </Marker>
+            );
+          }
+
+          return null;
+        })}
 
         {selectedLocation && (
-          <Marker
-            position={[
+          <Circle
+            center={[
               selectedLocation.lat,
               selectedLocation.lng
             ]}
-          >
-            <Popup>
-              Selected Plot
-            </Popup>
-          </Marker>
+            radius={radius * 1000}
+          />
         )}
 
+        {polygonPoints.length >= 3 && (
+          <>
+            <Polygon
+              positions={polygonPoints.map((point) => [
+                point.lat,
+                point.lng
+              ])}
+              pathOptions={{
+                color: "#2563eb",
+                fillOpacity: 0.2
+              }}
+            />
 
-{selectedLocation && (
-  <Circle
-    center={[
-      selectedLocation.lat,
-      selectedLocation.lng
-    ]}
-    radius={radius * 1000}
-  />
-)}
+            {!boundaryConfirmed && (
+              <Marker
+                position={[
+                  polygonPoints[polygonPoints.length - 1].lat,
+                  polygonPoints[polygonPoints.length - 1].lng
+                ]}
+              >
+                <Tooltip
+                  permanent
+                  interactive
+                  direction="right"
+                  offset={[14, 0]}
+                  opacity={1}
+                  className="boundary-actions-tooltip"
+                >
+                  <div className="boundary-actions">
+                    <button
+                      type="button"
+                      className="boundary-action confirm"
+                      aria-label="Finish boundary"
+                      title="Finish boundary"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        finishBoundary();
+                      }}
+                    >
+                      ✓
+                    </button>
 
-{polygonPoints.length >= 3 && (
-  <Polygon
-    positions={
-      polygonPoints.map(p => [
-        p.lat,
-        p.lng
-      ])
-    }
-  />
-)}
-
+                    <button
+                      type="button"
+                      className="boundary-action reset"
+                      aria-label="Reset boundary"
+                      title="Reset boundary"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        resetBoundary();
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </Tooltip>
+              </Marker>
+            )}
+          </>
+        )}
       </MapContainer>
     </>
   );
