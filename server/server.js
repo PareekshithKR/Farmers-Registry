@@ -7,7 +7,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 const Farmer = require("./models/Farmer");
-const User = require("./models/Userr");
+const User = require("./models/User");
 
 const app = express();
 
