@@ -6,6 +6,7 @@ function FarmerForm({
   selectedLocation,
   selectedPolygon,
   calculatedArea,
+  polygonPoints,
   setPolygonPoints,
   setBoundaryConfirmed
 }) {
@@ -13,6 +14,11 @@ function FarmerForm({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [cropType, setCropType] = useState("");
+  const [email, setEmail] = useState("");
+
+const [username, setUsername] = useState("");
+
+const [password, setPassword] = useState("");
 
   const registerFarmer = async () => {
 
@@ -28,20 +34,45 @@ function FarmerForm({
         return;
       }
 
-      const farmer = {
-        name,
-        phone,
-        cropType,
-        plotSize: calculatedArea,
+      const centerLat =
+  polygonPoints.reduce(
+    (sum, point) =>
+      sum + point.lat,
+    0
+  ) / polygonPoints.length;
 
-        landBoundary: {
-          type: "Polygon",
-          coordinates: [selectedPolygon]
-        }
-      };
+const centerLng =
+  polygonPoints.reduce(
+    (sum, point) =>
+      sum + point.lng,
+    0
+  ) / polygonPoints.length;
+
+      const farmer = {
+  name,
+  email,
+  username,
+  password,
+  phone,
+  cropType,
+  plotSize: calculatedArea,
+
+  location: {
+  type: "Point",
+  coordinates: [
+    centerLng,
+    centerLat
+  ]
+},
+
+  landBoundary: {
+    type: "Polygon",
+    coordinates: [selectedPolygon]
+  }
+};
 
       const response = await axios.post(
-        "http://localhost:3000/farmers",
+        "http://localhost:3000/register-farm",
         farmer
       );
 
@@ -54,9 +85,14 @@ function FarmerForm({
 
       setName("");
       setPhone("");
+      setEmail("");
+setUsername("");
+setPassword("");
       setCropType("");
 
-      alert("Farmer Registered Successfully");
+      alert(
+  "Farm submitted for admin approval"
+);
 
     } catch (error) {
 
@@ -109,6 +145,40 @@ function FarmerForm({
             setPhone(e.target.value)
           }
         />
+
+        <div className="form-group">
+  <input
+    className="input"
+    placeholder="Email"
+    value={email}
+    onChange={(e) =>
+      setEmail(e.target.value)
+    }
+  />
+</div>
+
+<div className="form-group">
+  <input
+    className="input"
+    placeholder="Username"
+    value={username}
+    onChange={(e) =>
+      setUsername(e.target.value)
+    }
+  />
+</div>
+
+<div className="form-group">
+  <input
+    type="password"
+    className="input"
+    placeholder="Password"
+    value={password}
+    onChange={(e) =>
+      setPassword(e.target.value)
+    }
+  />
+</div>
 
         <input
           className="input"

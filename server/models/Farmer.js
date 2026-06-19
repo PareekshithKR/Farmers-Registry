@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 
 const farmerSchema = new mongoose.Schema({
+
   name: {
     type: String,
     required: true
@@ -18,24 +19,64 @@ const farmerSchema = new mongoose.Schema({
     type: Number
   },
 
-landBoundary: {
+  owner: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
+  },
+
+  status: {
+    type: String,
+    enum: [
+      "pending",
+      "approved",
+      "rejected"
+    ],
+    default: "pending"
+  },
+
+  location: {
+
   type: {
     type: String,
-    default: "Polygon"
+    default: "Point"
   },
 
   coordinates: {
-    type: [[[Number]]]
+    type: [Number]
   }
+
 },
+
+  landBoundary: {
+
+    type: {
+      type: String,
+      default: "Polygon"
+    },
+
+    coordinates: {
+      type: [[[Number]]]
+    }
+
+  },
 
   registeredAt: {
     type: Date,
     default: Date.now
   }
+
 });
 
-// Geospatial Index
-farmerSchema.index({ location: "2dsphere" });
+farmerSchema.index({
+  location: "2dsphere"
+});
 
-module.exports = mongoose.model("Farmer", farmerSchema);
+farmerSchema.index({
+  landBoundary: "2dsphere"
+});
+
+module.exports =
+  mongoose.model(
+    "Farmer",
+    farmerSchema
+  );

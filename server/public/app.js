@@ -59,7 +59,7 @@ const farmer = {
 };
 
 await axios.post(
-  "http://localhost:3000/farmers",
+  "http://localhost:3000/register-farm",
   farmer
 );
 

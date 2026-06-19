@@ -3,8 +3,11 @@ import {
   Route
 } from "react-router-dom";
 
-import HomePage from "./pages/HomePage";
-import RegistryPage from "./pages/RegistryPage";
+import HomePage from "./HomePage.jsx/HomePage";
+import RegistryPage from "./HomePage.jsx/RegistryPage";
+import AdminDashboard
+from "./HomePage.jsx/AdminDashboard";
+import LoginPage from "./HomePage.jsx/LoginPage";
 
 function App() {
   return (
@@ -20,7 +23,19 @@ function App() {
         element={<RegistryPage />}
       />
 
+      <Route
+  path="/admin"
+  element={<AdminDashboard />}
+/>
+
+<Route
+  path="/login"
+  element={<LoginPage />}
+/>
+
     </Routes>
+
+    
   );
 }
 

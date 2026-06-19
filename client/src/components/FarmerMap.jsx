@@ -189,8 +189,14 @@ function FarmerMap({
   try {
 
     await axios.delete(
-      `http://localhost:3000/farmers/${id}`
-    );
+  `http://localhost:3000/farmers/${id}`,
+  {
+    headers: {
+      Authorization:
+        `Bearer ${localStorage.getItem("token")}`
+    }
+  }
+);
 
     fetchFarmers(true);
 
@@ -213,35 +219,6 @@ const startEditing = (
   setEditingFarmer(
     farmer
   );
-
-};
-
-const saveFarmer = async () => {
-
-  try {
-
-    await axios.put(
-      `http://localhost:3000/farmers/${editingFarmer._id}`,
-      {
-        name: editingFarmer.name,
-        phone: editingFarmer.phone,
-        cropType: editingFarmer.cropType
-      }
-    );
-
-    setEditingFarmer(null);
-
-    fetchFarmers(true);
-
-    alert("Farmer Updated");
-
-  } catch (error) {
-
-    console.error(error);
-
-    alert("Update Failed");
-
-  }
 
 };
 
@@ -393,100 +370,14 @@ const saveFarmer = async () => {
           <br />
           <br />
 
-          <button
-            onClick={() =>
-              startEditing(farmer)
-            }
-          >
-            ✏️ Edit
-          </button>
-
-          <button
-            onClick={() =>
-              deleteFarmer(
-                farmer._id
-              )
-            }
-            style={{
-              marginLeft: "10px"
-            }}
-          >
-            🗑 Delete
-          </button>
+          {localStorage.getItem("role") === "admin" && (
+  <>
+    
+  </>
+)}
 
         </Popup>
       </Marker>
-
-      {editingFarmer && (
-
-  <div className="modal-overlay">
-
-    <div className="modal">
-
-      <h2>Edit Farmer</h2>
-
-      <input
-        className="input"
-        value={editingFarmer.name}
-        onChange={(e) =>
-          setEditingFarmer({
-            ...editingFarmer,
-            name: e.target.value
-          })
-        }
-      />
-
-      <input
-        className="input"
-        value={editingFarmer.phone}
-        onChange={(e) =>
-          setEditingFarmer({
-            ...editingFarmer,
-            phone: e.target.value
-          })
-        }
-      />
-
-      <input
-        className="input"
-        value={editingFarmer.cropType}
-        onChange={(e) =>
-          setEditingFarmer({
-            ...editingFarmer,
-            cropType: e.target.value
-          })
-        }
-      />
-
-      <div
-        style={{
-          display:"flex",
-          gap:"10px"
-        }}
-      >
-
-        <button
-          onClick={saveFarmer}
-        >
-          Save
-        </button>
-
-        <button
-          onClick={() =>
-            setEditingFarmer(null)
-          }
-        >
-          Cancel
-        </button>
-
-      </div>
-
-    </div>
-
-  </div>
-
-)}
-
     </>
   );
 }
@@ -522,26 +413,11 @@ const saveFarmer = async () => {
   <br />
   <br />
 
-  <button
-    onClick={() =>
-      startEditing(farmer)
-    }
-  >
-    ✏️ Edit
-  </button>
-
-  <button
-    onClick={() =>
-      deleteFarmer(
-        farmer._id
-      )
-    }
-    style={{
-      marginLeft:"10px"
-    }}
-  >
-    🗑 Delete
-  </button>
+  {localStorage.getItem("role") === "admin" && (
+  <>
+    
+  </>
+)}
 
 </Popup>
               </Marker>
