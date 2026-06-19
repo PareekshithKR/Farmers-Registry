@@ -72,7 +72,7 @@ const centerLng =
 };
 
       const response = await axios.post(
-        "http://localhost:3000/register-farm",
+        "https://farmers-registry.onrender.com/register-farm",
         farmer
       );
 

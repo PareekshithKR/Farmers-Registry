@@ -52,7 +52,7 @@ function AdminDashboard() {
 
   const loadPending = async () => {
     try {
-      const response = await axios.get("http://localhost:3000/admin/pending-farms", getHeaders());
+      const response = await axios.get("https://farmers-registry.onrender.com/admin/pending-farms", getHeaders());
       setFarmers(response.data);
       setShowAll(false);
     } catch (error) {
@@ -63,7 +63,7 @@ function AdminDashboard() {
 
   const loadAll = async () => {
     try {
-      const response = await axios.get("http://localhost:3000/admin/farms", getHeaders());
+      const response = await axios.get("https://farmers-registry.onrender.com/admin/farms", getHeaders());
       setFarmers(response.data);
       setShowAll(true);
     } catch (error) {
@@ -83,7 +83,7 @@ function AdminDashboard() {
 
   const approve = async (id) => {
     try {
-      await axios.put(`http://localhost:3000/farmers/${id}/approve`, {}, getHeaders());
+      await axios.put(`https://farmers-registry.onrender.com/farmers/${id}/approve`, {}, getHeaders());
       refreshList();
     } catch (error) {
       console.error(error);
@@ -92,7 +92,7 @@ function AdminDashboard() {
 
   const reject = async (id) => {
     try {
-      await axios.put(`http://localhost:3000/farmers/${id}/reject`, {}, getHeaders());
+      await axios.put(`https://farmers-registry.onrender.com/farmers/${id}/reject`, {}, getHeaders());
       refreshList();
     } catch (error) {
       console.error(error);
@@ -104,7 +104,7 @@ function AdminDashboard() {
     if (!confirmed) return;
 
     try {
-      await axios.delete(`http://localhost:3000/farmers/${id}`, getHeaders());
+      await axios.delete(`https://farmers-registry.onrender.com/farmers/${id}`, getHeaders());
       refreshList();
     } catch (error) {
       console.error(error);

@@ -115,7 +115,7 @@ function FarmerMap({
     const loadFarmers = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:3000/farmers"
+          "https://farmers-registry.onrender.com/farmers"
         );
 
         if (!ignoreResponse) {
@@ -136,7 +136,7 @@ function FarmerMap({
   const fetchFarmers = async (fitResults = false) => {
     try {
       const response = await axios.get(
-        "http://localhost:3000/farmers"
+        "https://farmers-registry.onrender.com/farmers"
       );
 
       setFarmers(response.data);
@@ -157,7 +157,7 @@ function FarmerMap({
 
     try {
       const response = await axios.get(
-        "http://localhost:3000/farmers/nearby",
+        "https://farmers-registry.onrender.com/farmers/nearby",
         {
           params: {
             lat: selectedLocation.lat,
@@ -189,7 +189,7 @@ function FarmerMap({
   try {
 
     await axios.delete(
-  `http://localhost:3000/farmers/${id}`,
+  `https://farmers-registry.onrender.com/farmers/${id}`,
   {
     headers: {
       Authorization:

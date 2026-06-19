@@ -21,7 +21,7 @@ const userSchema =
       default: "farmer"
     },
 
-    approved: {
+    https: {
       type: Boolean,
       default: false
     }
